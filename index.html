@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WebApp for Property ID and Mac Address Registry</title>
+  <title>Borrow / Return / Inventory</title>
   <style>
     :root { --primary:#4f46e5; --bg:#0b0c10; --card:#ffffff; }
     body { margin:0; font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#f5f7fb; }
@@ -393,10 +393,6 @@ function applyLanguage() {
         input.placeholder = i18n[currentLang]['phPropID'];
     });
 
-    // 4. Update Form Title if visible
-    if(document.getElementById('formCard').style.display !== 'none'){
-        updateFormTitle();
-    }
 }
 
 function t(key) {
@@ -435,12 +431,6 @@ function goHome(){
   document.getElementById('home').style.display='block';
 }
 
-
-function updateFormTitle() {
-    const label = i18n[currentLang]['formSuffix'];
-    const modeTrans = i18n[currentLang][mode]; // Borrow/Return/Inventory translated
-    document.getElementById('formTitle').textContent = `${modeTrans} ${label}`;
-}
 
 /** ====== PROPERTY ROWS ====== */
 function updateRemoveButtons() {
