@@ -81,7 +81,7 @@
     
     /* Lang Switcher */
     .lang-btn {
-        position: absolute; top: 20px; right: 20px; z-index: 50;
+        position: absolute; top: 70px; right: 20px; z-index: 50;
         background: #f3f4f6; border: 1px solid #e5e7eb; 
         padding: 6px 12px; border-radius: 20px; 
         font-size: 13px; font-weight: 600; cursor: pointer; color: #374151;
@@ -119,7 +119,7 @@
   <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;">
     <div class="card" style="text-align:center; max-width:400px; width:100%;">
       <button id="globalLangBtn" class="lang-btn" onclick="toggleLanguage()">中 / EN</button>
-      <h1 data-i18n="appTitle">Borrow / Return / Inventory</h1>
+       <h1 data-i18n="appTitle">Property ID and Mac Address Registry</h1>
       <p class="muted" data-i18n="signinMsg">Please sign in with your Google account</p>
       <div class="signin-wrapper">
         <div class="g_id_signin"
@@ -150,17 +150,10 @@
         <strong data-i18n="whatCanDo">What you can do:</strong><br><br>
         
         <strong data-i18n="checkAuth">Check if you are already authorized. If yes, add your email in the sheet of "authnames"</strong><br>
-        <a href="https://docs.google.com/spreadsheets/d/1AQ4cvZ_SjbIkW-ZwJz2QbB_67Sepo4RUUtlkyNGsutE/edit?gid=59643720" 
+        <a href="https://docs.google.com/spreadsheets/d/1WY7qdwqCAel2eq6brMvFu9lLuLC1WcF58g-eFOBnPrA/edit?gid=2010804050" 
            target="_blank" 
            style="color:#1d4ed8; font-weight:600; text-decoration:underline;">
            <span data-i18n="openAuthList">Open Authorized Users List</span>
-        </a><br><br>
-        
-        <strong data-i18n="askRC">If you don't have right to edit, please check with your Team RC to add your email address to the authorized group</strong><br>
-        <a href="https://docs.google.com/spreadsheets/d/1AQ4cvZ_SjbIkW-ZwJz2QbB_67Sepo4RUUtlkyNGsutE/edit?gid=388466886" 
-           target="_blank" 
-           style="color:#1d4ed8; font-weight:600; text-decoration:underline;">
-           <span data-i18n="openGroupList">Open team RC handle group List</span>
         </a><br><br>
       </div>
 
@@ -178,7 +171,7 @@
       </div>
 
       <p style="margin-top:36px; font-size:13px; color:#6b7280;">
-        <span data-i18n="needHelp">Need help? Contact</span> <strong>Team RC</strong>
+        <span data-i18n="needHelp">Need help? Contact</span> <strong>Wireless Team</strong>
       </p>
     </div>
   </div>
@@ -203,10 +196,9 @@
     <div class="card" id="home">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
         <div>
-            <h1 data-i18n="appTitle">Borrow / Return / Inventory</h1>
+            <h1 data-i18n="appTitle">Property ID and Mac Address Registry</h1>
             <p class="muted"><span data-i18n="hello">Hello</span>, <span id="userName" style="font-weight:600;"></span>!</p>
-            <p class="muted" data-i18n="chooseAction">Choose an action</p>
-        </div>
+          </div>
 
         <div style="display:flex; gap: 8px;">            
             <button class="btn ghost" onclick="logout()" data-i18n="logout">
@@ -214,22 +206,16 @@
             </button>
         </div>
         </div>
-      
-      <div class="row" style="margin-top:12px; gap:12px;">
-        <button class="btn primary full" onclick="openForm('Borrow')" data-i18n="btnBorrow">Borrow</button>
-        <button class="btn ghost full" onclick="openForm('Return')" data-i18n="btnReturn">Return</button>
-        <button class="btn ghost full" onclick="openForm('Inventory')" data-i18n="btnInventory">Inventory</button>
-      </div>
     </div>
     
     <div class="card" id="formCard" style="display:none; margin-top:16px">
       <h2 id="formTitle">Form</h2>
       <div class="grid" style="margin-top:12px">
         <div><label data-i18n="labelDate">Date</label><input id="date" type="text" readonly></div>
-        <div><label data-i18n="labelName">Name</label></div>
+        <div><label data-i18n="labelName">Property ID</label></div>
           <div class="field">
             <div class="input-row">
-              <input id="name" type="text" placeholder="Scan or type a name"
+              <input id="name" type="text" placeholder="Scan or type a property ID"
                 oninput="maybeHidePreviewIfEmpty(this)">
               <div class="scan-icons">
                 <button class="scan-btn" title="Scan QR/Bar"  onclick="openScanner(null, this.closest('.field').querySelector('input'))">📷</button>
@@ -241,14 +227,15 @@
           </div>
         <div>
           <div class="row" style="align-items:center; justify-content:space-between">
-            <label style="margin:0" data-i18n="labelPropID">Property ID(s)</label>
+            <label style="margin:0" data-i18n="labelPropID">MacAddress</label>
             <button class="btn ghost" onclick="addPropertyRow()" data-i18n="btnAddLine">+ Add line</button>
           </div>
           <div id="props" class="grid" style="margin-top:8px"></div>
         </div>
         <div class="divider"></div>
         <div class="row">
-          <button class="btn full" onclick="goHome()" data-i18n="btnBack">Back</button>
+          <button class="btn full" onclick="goHome()" data-i18n="btnBack">Clear</button>
+
           <button class="btn primary full" onclick="submitForm()" data-i18n="btnConfirm">Confirm / Submit</button>
         </div>
       </div>
@@ -275,12 +262,12 @@
 
 <script>
 /** ====== CONFIG ====== */
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxzwLaLKmP0ixib-GxiaKOvT8l_-0ZeIeJXOWyhktqEqaROAc_QeVKjTWclgFL-gWweA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxK6TBhdodmvmlZm_odH_LAVoTzjCfhtf915ONTevpG7r7PW_nf6RmmpIBU4h7uWiBO/exec';
 
 /** ====== TRANSLATIONS ====== */
 const i18n = {
     en: {
-        appTitle: "Borrow / Return / Inventory",
+        appTitle: "AP Property ID and Mac Address Registry",
         signinMsg: "Please sign in with your Google account",
         authOnlyMsg: "Only authorized emails can access this tool",
         accessDenied: "Access Denied",
@@ -305,12 +292,12 @@ const i18n = {
         Return: "Return",
         Inventory: "Inventory",
         labelDate: "Date",
-        labelName: "Name",
-        phName: "Scan or type a name",
-        phPropID: "Scan or type a property ID",
-        labelPropID: "Property ID(s)",
+        labelName: "property ID",
+        phName: "Scan or type a property ID",
+        phPropID: "Scan or type a Mac Address",
+        labelPropID: "Mac Address(s)",
         btnAddLine: "+ Add line",
-        btnBack: "Back",
+        btnBack: "Clear",
         btnConfirm: "Confirm / Submit",
         scanHint: "Point camera at a code...",
         scanHintocr: "Draw a rectangle to OCR",
@@ -327,7 +314,7 @@ const i18n = {
         toastCameraErr: "Camera error: "
     },
     tw: {
-        appTitle: "借用 / 歸還 / 盤點",
+        appTitle: "AP產編和Mac位址註冊工具",
         signinMsg: "請使用您的 Google 帳號登入",
         authOnlyMsg: "僅授權的電子郵件可存取此工具",
         accessDenied: "存取被拒",
@@ -352,12 +339,12 @@ const i18n = {
         Return: "歸還",
         Inventory: "盤點",
         labelDate: "日期",
-        labelName: "姓名",
-        phName: "掃描或輸入姓名",
-        phPropID: "掃描或輸入產編",
-        labelPropID: "產編",
+        labelName: "產編",
+        phName: "掃描或輸入產編",
+        phPropID: "掃描或輸入Mac位址",
+        labelPropID: "Mac位址",
         btnAddLine: "+ 新增一行",
-        btnBack: "返回",
+        btnBack: "清除",
         btnConfirm: "確認 / 送出",
         scanHint: "將鏡頭對準條碼...",
         scanHintocr: "畫出方形OCR辨識區域",
@@ -441,32 +428,18 @@ function toast(msg, ms=2000){
   el.textContent = msg; el.style.display='block';
   clearTimeout(el._t); el._t = setTimeout(()=> el.style.display='none', ms);
 }
-
 function goHome(){
   stopScanner();
+  resetForm();
   document.getElementById('formCard').style.display='none';
   document.getElementById('home').style.display='block';
 }
+
 
 function updateFormTitle() {
     const label = i18n[currentLang]['formSuffix'];
     const modeTrans = i18n[currentLang][mode]; // Borrow/Return/Inventory translated
     document.getElementById('formTitle').textContent = `${modeTrans} ${label}`;
-}
-
-/** ====== HOME -> FORM ====== */
-function openForm(selected){
-  mode = selected; // 'Borrow', 'Return', 'Inventory' (English keys)
-  document.getElementById('home').style.display='none';
-  document.getElementById('formCard').style.display='block';
-  
-  updateFormTitle();
-  
-  document.getElementById('date').value = fmtDate();
-  document.getElementById('name').value = '';
-  const wrap = document.getElementById('props');
-  wrap.innerHTML = '';
-  addPropertyRow(); // start with one
 }
 
 /** ====== PROPERTY ROWS ====== */
@@ -673,7 +646,7 @@ window.openScanner = openScanner;
 
 <script>
 // ==================== CONFIGURATION ====================
-  const SHEET_ID        = '1AQ4cvZ_SjbIkW-ZwJz2QbB_67Sepo4RUUtlkyNGsutE'; 
+  const SHEET_ID        = '1WY7qdwqCAel2eq6brMvFu9lLuLC1WcF58g-eFOBnPrA'; 
   const CLIENT_ID       = '941275028852-6d7m0cbgpa67vvhrsspgcn0a81m03hc9.apps.googleusercontent.com';
   const SHEET_NAME      = 'authnames'
   const RANGE           = 'A:A'; 
@@ -687,10 +660,30 @@ function parseCsvToEmails(csvText) {
 function showApp(user) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  if (user) document.getElementById('userName').textContent = user.name || user.email;
-  // Ensure language is applied when app shows (in case of cached user)
+
+  if (user) {
+    document.getElementById('userName').textContent = user.name || user.email;
+  }
+
+  // show form directly
+  document.getElementById('home').style.display = 'none';
+  document.getElementById('formCard').style.display = 'block';
+
+  // set date
+  document.getElementById('date').value = fmtDate();
+
+  // reset inputs
+  document.getElementById('name').value = '';
+
+  const wrap = document.getElementById('props');
+  wrap.innerHTML = '';
+
+  // ✅ THIS is the missing part
+  addPropertyRow();
+
   applyLanguage();
 }
+
 
 
 function showBlocked() {
@@ -996,8 +989,6 @@ async function snapshotAndOCR(){
   toast("OCR done");
 }
 
-
-
 function closeScanner(){
   document.getElementById('scannerModal').style.display='none';
   stopScanner();
@@ -1013,6 +1004,19 @@ function closeScanner(){
   scanTimer = null;
 }
                                 
+function resetForm(){
+  // Clear basic fields
+  document.getElementById('date').value = fmtDate();
+  document.getElementById('name').value = '';
+
+  // Clear property rows
+  const wrap = document.getElementById('props');
+  wrap.innerHTML = '';
+  addPropertyRow(); // always keep one empty row
+
+  // Reset scan state
+  currentInputEl = null;
+}
 
 </script>
 </body>
