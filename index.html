@@ -27,7 +27,21 @@
     label { display:block; font-size:13px; color:#374151; margin-bottom:6px; }
     input[type=text] { width:100%; padding:12px 44px 12px 12px; border:1px solid #e5e7eb; border-radius:12px; outline:none; }
     input[readonly] { background:#f9fafb; }
-    .field { position: relative; display: flex; align-items: center; }
+    .field{
+      position: relative;
+      display: flex;
+      flex-direction: column;   /* key */
+      align-items: stretch;      /* key */
+      gap: 8px;                  /* space between row and preview */
+    }
+    .field .input-row{
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .field .input-row input{
+      width: 100%;
+    }   
     .field input { flex: 1; }
     .field .icon-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
     .icon-btn { position:absolute; right:8px; top:50%; transform:translateY(-50%); border:0; background:transparent; padding:6px; cursor:pointer; font-size: 1.2rem;}
@@ -35,11 +49,30 @@
     .prop-row .remove { border:0; background:transparent; color:#ef4444; font-size:20px; cursor:pointer; }
     .divider { height:1px; background:#e5e7eb; margin:8px 0 4px }
     .toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:#111827; color:#fff; padding:10px 14px; border-radius:999px; font-size:14px; display:none; z-index: 999; text-align:center; min-width: 200px;}
-    
+    .ocr-preview{
+      margin-top:8px;
+      width:100%;
+      max-height:220px;
+      object-fit:contain;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      background:#fff;
+      display:none;
+    }
     /* Scanner modal */
     .modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:16px; z-index: 1000;}
     .modal > .sheet { background:#000; width:min(720px, 96vw); border-radius:16px; overflow:hidden; }
-    #video { width:100%; background:#000; aspect-ratio:3/4; object-fit:cover }
+    /* Use contain to prevent cropping like original tool */
+    #video, #overlay{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      touch-action:none;
+    }
+
+    #overlay { display:block; }
     .modal .bar { display:flex; gap:8px; padding:10px; background:#0f172a; color:#fff; align-items:center; justify-content:space-between }
     .modal .bar .btn { border-radius:8px; padding:8px 10px; }
     
@@ -53,6 +86,30 @@
         font-size: 13px; font-weight: 600; cursor: pointer; color: #374151;
     }
     .lang-btn:hover { background: #e5e7eb; }
+    .scan-icons{
+      position:absolute;
+      right:8px;
+      top:50%;
+      transform:translateY(-50%);
+      display:flex;
+      gap:6px;
+      width:96px;            /* fixed space for 3 buttons */
+      justify-content:flex-end;
+      pointer-events:auto;
+    }
+
+    /* each icon button */
+    .scan-btn{
+      border:0;
+      background:transparent;
+      cursor:pointer;
+      padding:4px;
+      font-size:16px;
+      line-height:1;
+      opacity:.85;
+    }
+    .scan-btn:hover{ opacity:1; }
+    
   </style>
 </head>
 <body>
@@ -142,7 +199,7 @@
       window.ZXingBrowser = { BrowserMultiFormatReader, BrowserCodeReader, DecodeHintType, BarcodeFormat, hints };
       console.log("ZXing loaded");
     </script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <div class="card" id="home">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
         <div>
@@ -170,10 +227,18 @@
       <div class="grid" style="margin-top:12px">
         <div><label data-i18n="labelDate">Date</label><input id="date" type="text" readonly></div>
         <div><label data-i18n="labelName">Name</label></div>
-        <div class="field">
-          <input id="name" type="text" placeholder="Scan or type a name" data-placeholder="phName">
-           <button class="icon-btn" aria-label="Scan name" onclick="openScanner('name')">📷</button>
-        </div>
+          <div class="field">
+            <div class="input-row">
+              <input id="name" type="text" placeholder="Scan or type a name"
+                oninput="maybeHidePreviewIfEmpty(this)">
+              <div class="scan-icons">
+                <button class="scan-btn" title="Scan QR/Bar"  onclick="openScanner(null, this.closest('.field').querySelector('input'))">📷</button>
+                <button class="scan-btn" title="Scan OCR" onclick="openOCR('name')">🔤</button>
+              </div>
+            </div>
+          
+            <img class="ocr-preview" alt="OCR capture preview">
+          </div>
         <div>
           <div class="row" style="align-items:center; justify-content:space-between">
             <label style="margin:0" data-i18n="labelPropID">Property ID(s)</label>
@@ -192,18 +257,21 @@
 
   <div class="modal" id="scannerModal" role="dialog">
       <div class="sheet">
-        <video id="video" autoplay playsinline muted></video>
+        <div id="camBox" style="position:relative; width:100%; max-width:720px; margin:0 auto; background:black; overflow:hidden;">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="overlay"></canvas>
+        </div>
         <div class="bar">
-          <div data-i18n="scanHint">Point camera at a QR code…</div>
+          <div id="scanHint" data-i18n="scanHint">Point camera at a code...</div>
           <div>
             <button class="btn" onclick="toggleTorch()" data-i18n="btnTorch">Torch</button>
             <button class="btn" onclick="closeScanner()" data-i18n="btnClose">Close</button>
-          </div>
-        </div>
       </div>
     </div>
+  </div>
+</div>
 
-  <div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 /** ====== CONFIG ====== */
@@ -245,6 +313,7 @@ const i18n = {
         btnBack: "Back",
         btnConfirm: "Confirm / Submit",
         scanHint: "Point camera at a code...",
+        scanHintocr: "Draw a rectangle to OCR",
         btnTorch: "Torch",
         btnClose: "Close",
         toastKeepOne: "Keep at least one line",
@@ -291,6 +360,7 @@ const i18n = {
         btnBack: "返回",
         btnConfirm: "確認 / 送出",
         scanHint: "將鏡頭對準條碼...",
+        scanHintocr: "畫出方形OCR辨識區域",
         btnTorch: "手電筒",
         btnClose: "關閉",
         toastKeepOne: "請保留至少一行",
@@ -356,6 +426,9 @@ let codeReader = null;
 let currentDeviceId = null;
 let torchOn = false;
 let currentInputEl = null;
+let stream = null;        // ✅ make camera stream global
+let ocrMode = false;
+let scanTimer = null;     // (optional, but your code uses it)
 
 /** ====== UTILS ====== */
 function fmtDate(d=new Date()){
@@ -414,13 +487,26 @@ function addPropertyRow(value=''){
   // Get localized placeholder
   const ph = t('phPropID');
 
-  row.innerHTML = `
-    <div class="field col">
-      <input type="text" placeholder="${ph}" value="${value.replaceAll('"','&quot;')}" data-placeholder="phPropID" oninput="maybeAutogrow(this)">
-      <button class="icon-btn" aria-label="Scan Property" onclick="openScanner(null, this.previousElementSibling)">📷</button>
+row.innerHTML = `
+  <div class="field col">
+    <div class="input-row">
+      <input type="text"
+        placeholder="${ph}"
+        value="${value.replaceAll('"','&quot;')}"
+        data-placeholder="phPropID"
+        oninput="maybeAutogrow(this); maybeHidePreviewIfEmpty(this)">
+      <div class="scan-icons">
+        <button class="scan-btn" title="Scan QR/Bar"
+          onclick="openScanner(null, this.closest('.field').querySelector('input'))">📷</button>
+        <button class="scan-btn" title="Scan OCR"
+          onclick="openOCR(null, this.closest('.field').querySelector('input'))">🔤</button>
+      </div>
     </div>
-    <button class="remove" title="Remove" onclick="removeRow(this)">✕</button>
-  `;
+
+    <img class="ocr-preview" alt="OCR capture preview">
+  </div>
+  <button class="remove" title="Remove" onclick="removeRow(this)">✕</button>
+`;
   wrap.appendChild(row);
   maybeAutogrow(row.querySelector('input'));
   // Auto-add
@@ -460,10 +546,6 @@ function stopScanner(){
   finally{ codeReader = null; torchOn = false; }
 }
   
-function closeScanner(){
-  document.getElementById('scannerModal').style.display='none';
-  stopScanner();
-}
 
 /** ====== SUBMIT ====== */
 async function submitForm(){
@@ -503,45 +585,88 @@ if (location.protocol !== 'https:' && location.hostname !== 'localhost'){
 /** ====== SCANNER ====== */
 async function openScanner(targetId=null, directInputEl=null) {
   if (!window.ZXingBrowser) { alert("ZXingBrowser not loaded yet"); return; }
+
   const { BrowserMultiFormatReader, hints } = window.ZXingBrowser;
-  codeReader = new BrowserMultiFormatReader(hints);
+
+  // stop any previous stuff
+  stopScanner();
+  ocrMode = false;
+
+  // ✅ set target FIRST
   currentInputEl = directInputEl || (targetId ? document.getElementById(targetId) : null);
 
-  document.getElementById('scannerModal').style.display='flex';
+  // ✅ QR/Bar mode should NOT show OCR image (only clear for THIS target)
+  if (currentInputEl) {
+    maybeHidePreview(currentInputEl);
+    delete currentInputEl.dataset.ocrPreview;
+  }
 
-  const video = document.getElementById('video');
-  video.setAttribute('playsinline', 'true');
-  video.setAttribute('autoplay', 'true');
-  video.muted = true;
+  document.getElementById('scannerModal').style.display = 'flex';
 
-  const cb = (result, err) => {
-    if (!result) return;
-    const text = result.getText();
-    if (currentInputEl) {
-      currentInputEl.value = text;
-      currentInputEl.dispatchEvent(new Event('input', {bubbles:true}));
-    }
-    currentInputEl = null;
-    closeScanner();
-    toast(t('toastScanned'));
-  };
+  const video   = document.getElementById('video');
+  const overlay = document.getElementById('overlay');
+  const camBox  = document.getElementById('camBox');
+  const ctx     = overlay.getContext('2d');
+
+  // ✅ QR/Bar: disable drawing + reset hint
+  overlay.style.pointerEvents = "none";
+  document.getElementById('scanHint').textContent = t('scanHint');
+
+  codeReader = new BrowserMultiFormatReader(hints);
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }
     });
+
     video.srcObject = stream;
-    await new Promise(r => {
-      video.onloadedmetadata = () => { video.play().catch(()=>{}); r(); };
-    });
+
+    await new Promise(resolve => { video.onloadedmetadata = () => resolve(); });
+    await video.play().catch(()=>{});
+
+    const W = video.videoWidth || 1280;
+    const H = video.videoHeight || 720;
+    const ratio = W / H;
+
+    camBox.style.height = (camBox.clientWidth / ratio) + "px";
+
+    // ✅ resize canvas (this clears it)
+    overlay.width  = W;
+    overlay.height = H;
+
+    // ✅ make sure nothing from OCR is drawn
+    ctx.clearRect(0,0,overlay.width,overlay.height);
+
+    const cb = (result) => {
+      if (!result) return;
+
+      const text = result.getText();
+
+      if (currentInputEl) {
+        // keep it clean: QR/Bar always hides OCR preview
+        maybeHidePreview(currentInputEl);
+        delete currentInputEl.dataset.ocrPreview;
+
+        currentInputEl.value = text;
+        currentInputEl.dispatchEvent(new Event('input', { bubbles:true }));
+      }
+
+      currentInputEl = null;
+      closeScanner();
+      toast(t('toastScanned'));
+    };
+
     await codeReader.decodeFromVideoElement(video, cb);
+
   } catch (e) {
-    toast(`${t('toastCameraErr')} ${e.name || 'Error'}`);
+    toast(`${t('toastCameraErr')} ${e.name || e.message || 'Error'}`);
   }
-} 
+}
+window.openScanner = openScanner;
+
 </script>
 
-  </div>
+</div>
 </div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -558,6 +683,7 @@ function parseCsvToEmails(csvText) {
   return csvText.split('\n').flatMap(line => line.split(',')).map(e => e.replace(/"/g, '').trim().toLowerCase()).filter(Boolean);
 }
 
+
 function showApp(user) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -565,6 +691,7 @@ function showApp(user) {
   // Ensure language is applied when app shows (in case of cached user)
   applyLanguage();
 }
+
 
 function showBlocked() {
   document.getElementById('loginScreen').style.display = 'none';
@@ -590,6 +717,7 @@ window.addEventListener('load', () => {
   // Initial Lang Apply
   applyLanguage();
 });
+
 
 async function handleCredentialResponse(response) {
   const payload = JSON.parse(atob(response.credential.split('.')[1]));
@@ -624,6 +752,237 @@ async function handleCredentialResponse(response) {
     alert('Error checking authorization.');
   }
 }
+
+async function openOCR(targetId=null, directInputEl=null){
+  currentInputEl = directInputEl || (targetId ? document.getElementById(targetId) : null);
+  if (!currentInputEl) { toast('No target input'); return; }
+
+  document.getElementById('scannerModal').style.display = 'flex';
+
+  stopScanner();
+  ocrMode = true;
+
+  const video   = document.getElementById('video');
+  const overlay = document.getElementById('overlay');
+  const camBox  = document.getElementById('camBox');
+  const ctx     = overlay.getContext('2d');
+
+  // ✅ OCR needs drawing enabled
+  overlay.style.pointerEvents = "auto";
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+
+    video.srcObject = stream;
+
+    await new Promise(resolve => { video.onloadedmetadata = () => resolve(); });
+    await video.play().catch(()=>{});
+
+    const W = video.videoWidth || 1280;
+    const H = video.videoHeight || 720;
+    const ratio = W / H;
+
+    camBox.style.height = (camBox.clientWidth / ratio) + "px";
+
+    overlay.width  = W;
+    overlay.height = H;
+
+    // ✅ init OCR mask + hint
+    document.getElementById('scanHint').textContent = t('scanHintocr');;
+    ctx.clearRect(0,0,overlay.width,overlay.height);
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(0,0,overlay.width,overlay.height);
+
+  } catch (e) {
+    toast(`${t('toastCameraErr')} ${e.name || e.message || 'Error'}`);
+  }
+}
+window.openOCR = openOCR;
+
+
+function getOverlay() {
+  return document.getElementById('overlay');
+}
+function getCtx() {
+  const o = getOverlay();
+  return o ? o.getContext('2d') : null;
+}
+
+let drawing = false;
+let startX=0, startY=0, endX=0, endY=0;
+
+function fitOverlayToVideo() {
+  const overlay = getOverlay();
+  const video = document.getElementById('video');
+  if (!overlay || !video) return;
+  overlay.width  = video.videoWidth  || 1280;
+  overlay.height = video.videoHeight || 720;
+}
+
+
+
+function startOCRMode() {
+  if (!stream) { toast('Camera not started'); return; }
+
+  stopScanner();
+  ocrMode = true;
+
+  const overlay = getOverlay();
+  const ctx = getCtx();
+  if (!overlay || !ctx) { toast("Overlay not ready"); return; }
+
+  document.getElementById('scanHint').textContent = t('scanHintocr');;
+
+  fitOverlayToVideo();
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  ctx.fillRect(0,0,overlay.width,overlay.height);
+}
+
+function getPos(e) {
+  const overlay = document.getElementById('overlay');
+  const rect = overlay.getBoundingClientRect();
+
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+  const scaleX = overlay.width / rect.width;
+  const scaleY = overlay.height / rect.height;
+
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY
+  };
+}
+
+
+function redrawMask() {
+  const overlay = getOverlay();
+  const ctx = getCtx();
+  if (!overlay || !ctx) return;
+
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  ctx.fillRect(0,0,overlay.width,overlay.height);
+
+  const sx = Math.min(startX, endX);
+  const sy = Math.min(startY, endY);
+  const sw = Math.abs(endX - startX);
+  const sh = Math.abs(endY - startY);
+
+  ctx.clearRect(sx, sy, sw, sh);
+  ctx.strokeStyle = "yellow";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(sx, sy, sw, sh);
+}
+
+function startDraw(e){
+  if (!ocrMode) return;
+  drawing = true;
+  const p = getPos(e);
+  startX = endX = p.x;
+  startY = endY = p.y;
+  redrawMask();
+}
+
+function moveDraw(e){
+  if (!ocrMode || !drawing) return;
+  e.preventDefault();
+  const p = getPos(e);
+  endX = p.x; endY = p.y;
+  redrawMask();
+}
+
+function endDraw(){
+  if (!ocrMode || !drawing) return;
+  drawing = false;
+  redrawMask();
+  snapshotAndOCR();
+}
+
+function showOCRPreviewForTarget(inputEl, dataUrl){
+  const img = inputEl?.closest(".field")?.querySelector(".ocr-preview");
+  if (img){
+    img.src = dataUrl;
+    img.style.display = "block";
+  }
+}
+
+function maybeHidePreview(input){
+  const img = input?.closest(".field")?.querySelector(".ocr-preview");
+  if (img) { img.src = ""; img.style.display = "none"; }
+  if (input) delete input.dataset.ocrPreview;
+}
+  
+function maybeHidePreviewIfEmpty(input){
+  if (!input) return;
+  if (input.value.trim() !== "") return;
+  maybeHidePreview(input);
+}
+  
+async function snapshotAndOCR(){
+  const sx = Math.min(startX, endX);
+  const sy = Math.min(startY, endY);
+  const sw = Math.abs(endX - startX);
+  const sh = Math.abs(endY - startY);
+  if (sw < 10 || sh < 10) return;
+
+  const video = document.getElementById("video");
+
+  // 1) capture rectangle into a canvas
+  const snap = document.createElement("canvas");
+  snap.width = sw;
+  snap.height = sh;
+  snap.getContext("2d").drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  // 2) show preview (OCR only)
+  const dataUrl = snap.toDataURL("image/png");
+  if (currentInputEl) {
+    currentInputEl.dataset.ocrPreview = dataUrl; // optional, if you want to keep it
+    showOCRPreviewForTarget(currentInputEl, dataUrl);
+  }
+
+  toast("OCR running...");
+
+  // 3) OCR
+  const res = await Tesseract.recognize(snap, "eng", {
+    tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-_/.",
+  });
+
+  let txt = (res.data.text || "").trim().replace(/\s+/g,'');
+  if (!txt) { toast("OCR: no text"); return; }
+
+  // 4) write result back into the same target input
+  if (currentInputEl) {
+    currentInputEl.value = txt;
+    currentInputEl.dispatchEvent(new Event('input', { bubbles:true }));
+  }
+  currentInputEl = null;
+
+  closeScanner();
+  toast("OCR done");
+}
+
+
+
+function closeScanner(){
+  document.getElementById('scannerModal').style.display='none';
+  stopScanner();
+
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+
+  const overlay = getOverlay();
+  const ctx = getCtx();
+  if (overlay && ctx) ctx.clearRect(0,0,overlay.width,overlay.height);
+
+  ocrMode = false;
+  clearTimeout(scanTimer);
+  scanTimer = null;
+}
+                                
+
 </script>
 </body>
 </html>
