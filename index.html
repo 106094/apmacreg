@@ -257,7 +257,7 @@
 
 <script>
 /** ====== CONFIG ====== */
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxK6TBhdodmvmlZm_odH_LAVoTzjCfhtf915ONTevpG7r7PW_nf6RmmpIBU4h7uWiBO/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRXss__5IUYxGsgQr4qNjvIb3CQl91tUUy5ZleJyDBt7zzTgYrJyzalSxvNDNMVRHW/exec';
 
 /** ====== TRANSLATIONS ====== */
 const i18n = {
@@ -509,29 +509,44 @@ async function submitForm(){
   const name = document.getElementById('name').value.trim();
   const allInputs = Array.from(document.querySelectorAll('#props .prop-row input'));
   const ids = allInputs.map(i => i.value.trim()).filter(Boolean);
-  
-  if (!name.trim()) { toast(t('toastNameEmpty')); return; }
+
+  if (!name) { toast(t('toastNameEmpty')); return; }
   if (ids.length === 0) { toast(t('toastIdEmpty')); return; }
-   
-  const payload = { mode, date, name, propertyIds: ids };
+
+const payload = {
+  action: "submit",
+  date,
+  name,
+  propertyIds: ids,
+  email
+};
+
+
+  // ✅ UX: disable button while submitting
+  const btn = document.querySelector('[onclick="submitForm()"]');
+  btn.disabled = true;
+  btn.style.opacity = "0.6";
+  toast("Submitting...");
 
   try{
     await fetch(SCRIPT_URL, {
       method:'POST',
-      mode:'no-cors', 
+      mode:'no-cors',
       headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify(payload),
     });
-    
-    // Replace {n} in translation string
-    let msg = t('toastSubmitted').replace('{n}', ids.length);
-    toast(msg);
-    
-    setTimeout(()=> goHome(), 400);
+
+    toast(t('toastSubmitted').replace('{n}', ids.length));
+    resetForm();               // ✅ clear immediately
+    // or goHome();
   }catch(e){
-    toast(t('toastSubmitFail') + e);
+    toast(t('toastSubmitFail') + (e?.message || e));
+  }finally{
+    btn.disabled = false;
+    btn.style.opacity = "1";
   }
 }
+
 
 /** ====== BOOT ====== */
 if (location.protocol !== 'https:' && location.hostname !== 'localhost'){
