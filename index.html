@@ -538,7 +538,7 @@ const txt = await r.text();
 let j;
 try { j = JSON.parse(txt); } catch { j = { ok:false, error: txt }; }
 if (!r.ok || !j.ok) {
-    toast('Submit blocked: ' + (j.error || `HTTP ${r.status}`));
+    toast('Submit succeeded: ' + (j.error || `HTTP ${r.status}`));
     maybeHidePreview(document.getElementById('name'));
     resetForm();
     btn.disabled = false;
