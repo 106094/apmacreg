@@ -529,26 +529,27 @@ const payload = {
   btn.style.opacity = "0.6";
   toast("Submitting...");
 
-  try{
-    await fetch(SCRIPT_URL, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify(payload),
-    });
-  const j = await r.json();
-    if (!j.ok) {
-    toast('Submit blocked: ' + (j.error || 'unknown'));
-    return;
-        }
-    toast(`Submitted ${ids.length} item(s)`);
+  const r = await fetch(SCRIPT_URL, {
+  method: 'POST',
+  headers: { 'Content-Type':'text/plain;charset=utf-8' },
+  body: JSON.stringify(payload),
+});
+const txt = await r.text();
+let j;
+try { j = JSON.parse(txt); } catch { j = { ok:false, error: txt }; }
+if (!r.ok || !j.ok) {
+    toast('Submit blocked: ' + (j.error || `HTTP ${r.status}`));
     maybeHidePreview(document.getElementById('name'));
-    resetForm();               // ✅ clear immediately
-        // or goHome();
-  }catch(e){
-    toast(t('toastSubmitFail') + (e?.message || e));
-  }finally{
+    resetForm();
     btn.disabled = false;
     btn.style.opacity = "1";
+  return;
+}
+  else{
+    toast(t('toastSubmitFail') + (e?.message || e));
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    return;
   }
 }
 
@@ -713,14 +714,27 @@ window.addEventListener('load', () => {
 });
 
 async function checkAuth(email){
-  const url = `${SCRIPT_URL}?action=check-auth&email=${encodeURIComponent(email)}`;
-  const r = await fetch(url);
-  const j = await r.json();
+  const r = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    // IMPORTANT: text/plain avoids CORS preflight
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action:'check-auth', email })
+  });
+
+  // Apps Script returns JSON text
+  const txt = await r.text();
+  const j = JSON.parse(txt);
   return j.authorized === true;
 }
 
+function b64urlToJson(b64url){
+  const b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  return JSON.parse(atob(b64 + pad));
+}
 async function handleCredentialResponse(response) {
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  //const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const payload = b64urlToJson(response.credential.split('.')[1]);
   const email = payload.email.toLowerCase();
   const allowed = await checkAuth(email);
   if (allowed) {
